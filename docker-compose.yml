@@ -1,7 +1,10 @@
 version: "3.9"
 services:
   rstudio:
-    image: "$FLEX_IMAGE" 
+    build:
+      context: docker
+      dockerfile: Dockerfile
+    image: otho/flexdashboard2
     ports:
       - "8787:8787"
     volumes:

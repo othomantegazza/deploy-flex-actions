@@ -1,5 +1,17 @@
 # Pulling Rocker image with RStudio and R version 4.2
-FROM rocker/rstudio:4.2
+FROM rocker/r-ver:4.2.1
+
+ENV S6_VERSION=v2.1.0.2
+ENV RSTUDIO_VERSION=daily
+ENV DEFAULT_USER=rstudio
+ENV PANDOC_VERSION=default
+ENV PATH=/usr/lib/rstudio-server/bin:$PATH
+ENV ARCH=aarch64
+ENV DISABLE_AUTH=true
+# x86_64 
+
+RUN /rocker_scripts/install_rstudio.sh
+RUN /rocker_scripts/install_pandoc.sh
 
 # Setting environment variables
 ARG CONDA_ENV=flex_dashboard
@@ -8,12 +20,12 @@ ENV CONDA_ENV=$CONDA_ENV
 ARG PYTHON_VER=3.8
 ENV PYTHON_VER=$PYTHON_VER
 
-ARG QUARTO_VERSION=1.1.149
-ENV QUARTO_VERSION=$QUARTO_VERSION
+# ARG QUARTO_VERSION=1.1.149
+# ENV QUARTO_VERSION=$QUARTO_VERSION
 
 # Disabling the authentication step
-ENV USER="rstudio"
-CMD ["/usr/lib/rstudio-server/bin/rserver", "--server-daemonize", "0", "--auth-none", "1"]
+## ENV USER="rstudio"
+## CMD ["/usr/lib/rstudio-server/bin/rserver", "--server-daemonize", "0", "--auth-none", "1"]
 
 # Install jq to parse json files
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -33,6 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig1-dev \
     git \
     vim \
+    libgit2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # installing R packages
@@ -43,8 +56,8 @@ COPY packages.json packages/
 RUN Rscript packages/install_packages.R
 
 # Installing Quarto
-COPY install_quarto.sh packages/
-RUN  bash packages/install_quarto.sh $QUARTO_VERSION
+# COPY install_quarto.sh packages/
+# RUN  bash packages/install_quarto.sh $QUARTO_VERSION
 
 
 # Install miniconda
@@ -53,7 +66,7 @@ RUN sudo apt update && apt-get install -y --no-install-recommends \
     && sudo add-apt-repository -y ppa:deadsnakes/ppa \
     && sudo apt update 
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCH}.sh -O ~/miniconda.sh \
     && /bin/bash ~/miniconda.sh -b -p /opt/conda \
     && export PATH=/opt/conda/bin:$PATH \
     && conda init bash \
@@ -62,11 +75,13 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 # Set environment
 RUN . /root/.bashrc \
     && conda create -y --name $CONDA_ENV python=$PYTHON_VER 
-
+# 
 RUN echo "conda activate $CONDA_ENV" >> ~/.bashrc
 RUN Rscript packages/install_python.R
 
-# Add Rprofile with VScode settings
+# # Add Rprofile with VScode settings
 COPY .Rprofile ~/
 
 EXPOSE 8787
+
+CMD ["/init"]
